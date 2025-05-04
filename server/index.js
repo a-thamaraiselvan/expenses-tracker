@@ -482,9 +482,15 @@ app.get('/api/finance/monthly-summary', authenticateToken, async (req, res) => {
 
 
 // Initialize database and start server
+// Health check endpoint (for Render)
+app.get('/healthz', (req, res) => {
+  res.send('OK');
+});
+
+// Initialize database and start server
 (async () => {
   await initDb();
-  
+
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
