@@ -13,7 +13,6 @@ import {
 } from 'chart.js';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { ReportFilterValues } from './ReportFilters';
 
 ChartJS.register(
   CategoryScale,
@@ -27,60 +26,71 @@ ChartJS.register(
   ArcElement
 );
 
-interface ReportChartsProps {
-  filters: ReportFilterValues;
-}
+export const ReportCharts: React.FC = () => {
+  const [data, setData] = useState<any>({
+    labels: [],
+    income: [],
+    expenses: [],
+    categoryData: [],
+    categoryLabels: []
+  });
 
-export const ReportCharts: React.FC<ReportChartsProps> = ({ filters }) => {
-  const [data, setData] = useState<any>(null);
-
-  // Fetch live data from API (replace with actual API call)
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/report-data'); // Replace with your API endpoint
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/report-data`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch report data');
+        }
+
         const result = await response.json();
         setData(result);
       } catch (error) {
         console.error('Error fetching report data:', error);
+        setData({
+          labels: [],
+          income: [],
+          expenses: [],
+          categoryData: [],
+          categoryLabels: []
+        });
       }
     };
 
     fetchData();
-  }, [filters]);
+  }, []);
 
-  if (!data) {
-    return <p>Loading...</p>; // Display loading state until data is fetched
-  }
-
-  // Time series data for income and expenses
   const timeSeriesData = {
-    labels: data.labels, // Using the labels (e.g., months or categories)
+    labels: data.labels,
     datasets: [
-      ...(filters.type !== 'expense' ? [{
+      {
         label: 'Income',
-        data: data.income, // Actual income data
+        data: data.income,
         borderColor: 'rgba(16, 185, 129, 1)',
         backgroundColor: 'rgba(16, 185, 129, 0.1)',
         tension: 0.3,
-      }] : []),
-      ...(filters.type !== 'income' ? [{
+      },
+      {
         label: 'Expenses',
-        data: data.expenses, // Actual expense data
+        data: data.expenses,
         borderColor: 'rgba(239, 68, 68, 1)',
         backgroundColor: 'rgba(239, 68, 68, 0.1)',
         tension: 0.3,
-      }] : []),
+      },
     ],
   };
 
-  // Category data for doughnut chart
   const categoryData = {
-    labels: data.labels, // Using the labels (e.g., categories or periods)
+    labels: data.categoryLabels,
     datasets: [
       {
-        data: filters.type === 'income' ? data.income :
-              filters.type === 'expense' ? data.expenses : data.categoryData,
+        data: data.categoryData,
         backgroundColor: [
           'rgba(255, 99, 132, 0.7)',
           'rgba(54, 162, 235, 0.7)',
@@ -105,36 +115,32 @@ export const ReportCharts: React.FC<ReportChartsProps> = ({ filters }) => {
   const options = {
     responsive: true,
     plugins: {
-      legend: {
-        position: 'top' as const,
-      },
+      legend: { position: 'top' as const },
       tooltip: {
         callbacks: {
-          label: function(context: any) {
+          label: function (context: any) {
             let label = context.dataset?.label || '';
-            if (label) {
-              label += ': ';
-            }
+            if (label) label += ': ';
             if (context.parsed.y !== null) {
-              label += new Intl.NumberFormat('en-IN', { // INR formatting
+              label += new Intl.NumberFormat('en-IN', {
                 style: 'currency',
                 currency: 'INR',
               }).format(context.parsed.y || context.raw);
             }
             return label;
-          }
-        }
-      }
+          },
+        },
+      },
     },
     scales: {
       y: {
         beginAtZero: true,
         ticks: {
-          callback: function(value: any) {
-            return '₹' + value.toLocaleString(); // Format as INR with ₹
-          }
-        }
-      }
+          callback: function (value: any) {
+            return '₹' + value.toLocaleString();
+          },
+        },
+      },
     },
   };
 
@@ -151,7 +157,7 @@ export const ReportCharts: React.FC<ReportChartsProps> = ({ filters }) => {
 
       <Card>
         <CardHeader>
-          <CardTitle>{filters.type === 'income' ? 'Income' : filters.type === 'expense' ? 'Expenses' : 'Income vs Expenses'} Comparison</CardTitle>
+          <CardTitle>Monthly Comparison</CardTitle>
         </CardHeader>
         <CardContent>
           <Bar options={options} data={timeSeriesData} height={250} />
@@ -160,40 +166,12 @@ export const ReportCharts: React.FC<ReportChartsProps> = ({ filters }) => {
 
       <Card>
         <CardHeader>
-          <CardTitle>
-            {filters.groupBy === 'category' 
-              ? 'Expense by Category' 
-              : filters.type === 'income' 
-                ? 'Income Distribution' 
-                : filters.type === 'expense' 
-                  ? 'Expense Distribution' 
-                  : 'Distribution by Period'}
-          </CardTitle>
+          <CardTitle>Category Distribution</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex justify-center">
             <div className="w-full max-w-xs">
-              <Doughnut 
-                data={categoryData} 
-                options={{
-                  responsive: true,
-                  plugins: {
-                    legend: {
-                      position: 'bottom' as const,
-                    },
-                    tooltip: {
-                      callbacks: {
-                        label: function(context: any) {
-                          const label = context.label || '';
-                          const value = context.raw || 0;
-                          return `${label}: ₹${value.toFixed(2)}`; // INR format with ₹
-                        }
-                      }
-                    }
-                  }
-                }} 
-                height={250} 
-              />
+              <Doughnut data={categoryData} options={options} height={250} />
             </div>
           </div>
         </CardContent>

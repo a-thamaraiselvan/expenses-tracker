@@ -1,5 +1,4 @@
-// RecentTransactions.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { format, isSameMonth } from 'date-fns';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
@@ -10,9 +9,14 @@ import { Income, Expense } from '../../types';
 type Transaction = (Income | Expense) & { type: 'income' | 'expense' };
 
 export const RecentTransactions: React.FC = () => {
-  const { summary } = useFinance();
+  const { summary, fetchSummary } = useFinance(); // Add a fetchSummary function to load data
   const { user } = useAuth();
   const currencySymbol = user?.currency === 'INR' ? '₹' : user?.currency === 'USD' ? '$' : '';
+  
+  useEffect(() => {
+    // Fetch the summary when the component mounts
+    fetchSummary(); // Make sure the backend returns all data
+  }, [fetchSummary]);
 
   if (!summary) {
     return (
@@ -31,6 +35,7 @@ export const RecentTransactions: React.FC = () => {
     );
   }
 
+  // Combining income and expense data into one array
   const incomeWithType: Transaction[] = summary.recentIncomes.map(income => ({
     ...income,
     type: 'income'
@@ -42,8 +47,8 @@ export const RecentTransactions: React.FC = () => {
   }));
 
   const combinedTransactions = [...incomeWithType, ...expensesWithType]
-    .filter(txn => isSameMonth(new Date(txn.date), new Date())) // ✅ Show only current month
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    .filter(txn => isSameMonth(new Date(txn.date), new Date()))  // Filter transactions for the current month
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());  // Sort by most recent
 
   const incomeCount = incomeWithType.filter(txn =>
     isSameMonth(new Date(txn.date), new Date())
@@ -111,10 +116,11 @@ export const RecentTransactions: React.FC = () => {
                 <div>
                   <p className="font-medium">
                     {transaction.type === 'income' 
-                      ? 'Income' 
-                      : ('category' in transaction ? transaction.category : 'Expense')
+                      ? (transaction.category || 'Income') // Display category if available
+                      : (transaction.category || 'Expense')  // Display category if available
                     }
                   </p>
+                  {/* Display description */}
                   <p className="text-xs text-gray-500">
                     {transaction.note ? (
                       transaction.note.length > 25 
@@ -125,12 +131,14 @@ export const RecentTransactions: React.FC = () => {
                 </div>
               </div>
               <div className="text-right">
+                {/* Amount and Currency */}
                 <p className={`font-semibold ${
                   transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                 }`}>
                   {transaction.type === 'income' ? '+' : '-'}
                   {currencySymbol}{Number(transaction.amount ?? 0).toFixed(2)}
                 </p>
+                {/* Date */}
                 <p className="text-xs text-gray-500">
                   {format(new Date(transaction.date), 'MMM dd, yyyy')}
                 </p>

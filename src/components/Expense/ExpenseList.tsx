@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { ArrowDownRight, Edit2, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
@@ -14,28 +14,8 @@ export const ExpenseList: React.FC = () => {
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [visibleExpenses, setVisibleExpenses] = useState<Expense[]>([]);
-  const [loadMore, setLoadMore] = useState(5); // Set initial data to 5
-
-  // Load more expenses when the user scrolls
-  const loadMoreExpenses = () => {
-    if (expenses.length > visibleExpenses.length) {
-      setVisibleExpenses(expenses.slice(0, loadMore + 5)); // Show 5 more
-      setLoadMore(loadMore + 5); // Update loadMore counter
-    }
-  };
-
-  // Handle scroll event to trigger loading more expenses
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const bottom = e.target.scrollHeight === e.target.scrollTop + e.target.clientHeight;
-    if (bottom) {
-      loadMoreExpenses();
-    }
-  };
-
-  useEffect(() => {
-    setVisibleExpenses(expenses.slice(0, loadMore)); // Initially show 5
-  }, [expenses]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   const handleEdit = (expense: Expense) => {
     setSelectedExpense(expense);
@@ -59,6 +39,16 @@ export const ExpenseList: React.FC = () => {
     }
   };
 
+  // Pagination logic: slice the expenses based on current page and items per page
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentExpenses = expenses.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Handle page change
+  const handlePageChange = (pageNumber: number) => setCurrentPage(pageNumber);
+
+  const totalPages = Math.ceil(expenses.length / itemsPerPage);
+
   if (!expenses || expenses.length === 0) {
     return (
       <Card>
@@ -74,64 +64,81 @@ export const ExpenseList: React.FC = () => {
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Expense History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div
-            className="overflow-y-auto"
-            style={{ maxHeight: '400px' }} // Fixed height and scrollable
-            onScroll={handleScroll}
-          >
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3">Date</th>
-                  <th className="px-6 py-3">Category</th>
-                  <th className="px-6 py-3">Amount</th>
-                  <th className="px-6 py-3">Note</th>
-                  <th className="px-6 py-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleExpenses.map((expense) => (
-                  <tr key={expense.id} className="bg-white border-b hover:bg-gray-50">
-                    <td className="px-6 py-4">{format(new Date(expense.date), 'MMM dd, yyyy')}</td>
-                    <td className="px-6 py-4">
-                      <span className="px-2 py-1 text-xs rounded-full bg-gray-100">
-                        {expense.category}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 font-medium text-red-600">
-                      <div className="flex items-center">
-                        <ArrowDownRight className="mr-1" size={16} />
-                        ₹{Number(expense.amount).toFixed(2)} {/* Change from $ to ₹ */}
-                      </div>
-                    </td>
+  <Card>
+  <CardHeader>
+    <CardTitle>Expense History</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="overflow-x-auto" style={{ maxHeight: '400px' }}> {/* Set max height here */}
+      <table className="min-w-[800px] w-full text-sm text-left">
+        <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+          <tr>
+            <th className="px-6 py-3">Date</th>
+            <th className="px-6 py-3">Category</th>
+            <th className="px-6 py-3">Amount</th>
+            <th className="px-6 py-3">Note</th>
+            <th className="px-6 py-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {currentExpenses.map((expense) => (
+            <tr key={expense.id} className="bg-white border-b hover:bg-gray-50">
+              <td className="px-6 py-4">{format(new Date(expense.date), 'MMM dd, yyyy')}</td>
+              <td className="px-6 py-4">
+                <span className="px-2 py-1 text-xs rounded-full bg-gray-100">
+                  {expense.category}
+                </span>
+              </td>
+              <td className="px-6 py-4 font-medium text-red-600">
+                <div className="flex items-center">
+                  <ArrowDownRight className="mr-1" size={16} />
+                  ₹{Number(expense.amount).toFixed(2)}
+                </div>
+              </td>
+              <td className="px-6 py-4">{expense.note || '-'}</td>
+              <td className="px-6 py-4 flex space-x-2">
+                <button
+                  className="text-primary-600 hover:text-primary-900"
+                  onClick={() => handleEdit(expense)}
+                >
+                  <Edit2 size={16} />
+                </button>
+                <button
+                  className="text-red-600 hover:text-red-900"
+                  onClick={() => handleDelete(expense)}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </CardContent>
+</Card>
 
-                    <td className="px-6 py-4">{expense.note || '-'}</td>
-                    <td className="px-6 py-4 flex space-x-2">
-                      <button
-                        className="text-primary-600 hover:text-primary-900"
-                        onClick={() => handleEdit(expense)}
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        className="text-red-600 hover:text-red-900"
-                        onClick={() => handleDelete(expense)}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+
+      {/* Pagination */}
+      <div className="flex justify-center py-4">
+        <Button
+          variant="outline"
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+        >
+          Previous
+        </Button>
+        <span className="px-4 py-2">
+          Page {currentPage} of {totalPages}
+        </span>
+        <Button
+          variant="outline"
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+        >
+          Next
+        </Button>
+      </div>
 
       {/* Edit Modal */}
       <Modal

@@ -30,7 +30,7 @@ const ExpensesPage: React.FC = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Expenses</h1>
           <p className="text-gray-600">Track and manage your expenses</p>
         </motion.div>
-        
+
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -46,6 +46,7 @@ const ExpensesPage: React.FC = () => {
         </motion.div>
       </div>
 
+      {/* Expense List */}
       <ExpenseList />
 
       {/* Add Expense Modal */}

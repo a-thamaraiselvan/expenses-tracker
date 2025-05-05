@@ -377,44 +377,45 @@ app.delete('/api/expenses/:id', authenticateToken, async (req, res) => {
 app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
   try {
     const connection = await pool.getConnection();
-    
+
     // Get total income
     const [totalIncomeResult] = await connection.query(
       'SELECT SUM(amount) as total FROM income WHERE user_id = ?',
       [req.user.id]
     );
     const totalIncome = totalIncomeResult[0].total || 0;
-    
+
     // Get total expense
     const [totalExpenseResult] = await connection.query(
       'SELECT SUM(amount) as total FROM expense WHERE user_id = ?',
       [req.user.id]
     );
     const totalExpense = totalExpenseResult[0].total || 0;
-    
+
     // Calculate balance
     const balance = totalIncome - totalExpense;
-    
-    // Get recent incomes
+
+    // Get current month incomes
     const [recentIncomes] = await connection.query(
-      'SELECT * FROM income WHERE user_id = ? ORDER BY date DESC LIMIT 5',
+      `SELECT * FROM income WHERE user_id = ? AND MONTH(date) = MONTH(CURRENT_DATE()) AND YEAR(date) = YEAR(CURRENT_DATE()) ORDER BY date DESC`,
       [req.user.id]
     );
-    
-    // Get recent expenses
+
+    // Get current month expenses
     const [recentExpenses] = await connection.query(
-      'SELECT * FROM expense WHERE user_id = ? ORDER BY date DESC LIMIT 5',
+      `SELECT * FROM expense WHERE user_id = ? AND MONTH(date) = MONTH(CURRENT_DATE()) AND YEAR(date) = YEAR(CURRENT_DATE()) ORDER BY date DESC`,
       [req.user.id]
     );
-    
-    // Get expense by category
+
+    // Get expense totals by category
     const [categoryTotals] = await connection.query(
       'SELECT category, SUM(amount) as amount FROM expense WHERE user_id = ? GROUP BY category ORDER BY amount DESC',
       [req.user.id]
     );
-    
+
     connection.release();
-    
+
+    // ✅ Single, complete JSON response
     res.json({
       totalIncome,
       totalExpense,
@@ -428,6 +429,7 @@ app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 
 
@@ -479,6 +481,69 @@ app.get('/api/finance/monthly-summary', authenticateToken, async (req, res) => {
 
 
 
+app.get('/api/report-data', authenticateToken, async (req, res) => {
+  try {
+    const connection = await pool.getConnection();
+
+    // Get income and expenses per month
+    const [incomeRows] = await connection.query(
+      `SELECT MONTH(date) AS month, SUM(amount) AS total 
+       FROM income 
+       WHERE user_id = ? AND YEAR(date) = YEAR(CURRENT_DATE()) 
+       GROUP BY MONTH(date)`,
+      [req.user.id]
+    );
+
+    const [expenseRows] = await connection.query(
+      `SELECT MONTH(date) AS month, SUM(amount) AS total 
+       FROM expense 
+       WHERE user_id = ? AND YEAR(date) = YEAR(CURRENT_DATE()) 
+       GROUP BY MONTH(date)`,
+      [req.user.id]
+    );
+
+    // Get category data for doughnut chart
+    const [categoryRows] = await connection.query(
+      `SELECT category, SUM(amount) AS total 
+       FROM expense 
+       WHERE user_id = ? 
+       GROUP BY category 
+       ORDER BY total DESC`,
+      [req.user.id]
+    );
+
+    connection.release();
+
+    // Labels: Jan to Dec
+    const labels = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+
+    const income = Array(12).fill(0);
+    const expenses = Array(12).fill(0);
+    incomeRows.forEach(row => {
+      income[row.month - 1] = row.total;
+    });
+    expenseRows.forEach(row => {
+      expenses[row.month - 1] = row.total;
+    });
+
+    const categoryData = categoryRows.map(row => row.total);
+    const categoryLabels = categoryRows.map(row => row.category);
+
+    res.json({
+      labels,
+      income,
+      expenses,
+      categoryData,
+      categoryLabels
+    });
+  } catch (error) {
+    console.error('Error in /api/report-data:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 
 // Initialize database and start server

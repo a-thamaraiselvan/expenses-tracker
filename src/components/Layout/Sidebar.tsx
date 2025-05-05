@@ -56,7 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, toggleMobile }) 
         </div>
         
         {user && (
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg group-hover:block hidden">
             <p className="text-sm font-semibold text-gray-700">Welcome,</p>
             <p className="text-lg font-bold text-primary-700">{user.username}</p>
           </div>
@@ -75,17 +75,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, toggleMobile }) 
               onClick={() => isMobileOpen && toggleMobile()}
             >
               <span className="mr-3">{item.icon}</span>
-              {item.label}
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                {item.label}
+              </span>
             </NavLink>
           ))}
         </nav>
         
         <div className="mt-auto">
           <button
-            onClick={logout}
+            onClick={logout} // Make sure this works
             className="flex items-center w-full px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200"
           >
             <LogOut size={20} className="mr-3" />
+            
             Log Out
           </button>
         </div>
@@ -123,7 +126,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, toggleMobile }) 
       </motion.aside>
       
       {/* Desktop sidebar */}
-      <aside className="hidden md:block w-64 bg-white border-r border-gray-200 min-h-screen sticky top-0">
+      <aside className="hidden md:block w-20 hover:w-64 transition-all duration-300 bg-white border-r border-gray-200 min-h-screen sticky top-0 overflow-hidden group">
         {sidebarContent}
       </aside>
     </>

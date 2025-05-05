@@ -9,7 +9,9 @@ import { isSameMonth } from 'date-fns';
 export const DashboardSummary: React.FC = () => {
   const { summary } = useFinance();
   const { user } = useAuth();
-  const currency = user?.currency ?? 'INR'; // default to INR if not set
+  const currency = user?.currency ?? 'INR'; // fallback to INR
+
+  const currentMonth = new Date();
 
   if (!summary) {
     return (
@@ -25,16 +27,15 @@ export const DashboardSummary: React.FC = () => {
     );
   }
 
-  // Filter for current month
-  const currentMonth = new Date();
+  // Get only current month entries
   const currentIncomes = summary.recentIncomes.filter(income =>
     isSameMonth(new Date(income.date), currentMonth)
   );
+
   const currentExpenses = summary.recentExpenses.filter(expense =>
     isSameMonth(new Date(expense.date), currentMonth)
   );
 
-  // Safely calculate totals
   const totalIncome = currentIncomes.reduce((sum, income) => sum + (Number(income.amount) || 0), 0);
   const totalExpense = currentExpenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
   const balance = totalIncome - totalExpense;
@@ -77,7 +78,6 @@ export const DashboardSummary: React.FC = () => {
 
   return (
     <>
-      {/* Current Month and Year Heading */}
       <div className="mb-4 text-xl font-semibold text-gray-700">
         Summary for {currentMonth.toLocaleString('default', { month: 'long' })} {currentMonth.getFullYear()}
       </div>
