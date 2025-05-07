@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Calendar, Tag, FileText, DollarSign } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input, Select, TextArea } from '../ui/Input';
 import { useFinance } from '../../context/FinanceContext';
@@ -16,29 +16,51 @@ interface ExpenseFormProps {
 interface ExpenseFormValues {
   amount: number;
   category: string;
+  subcategory?: string;
   date: string;
-  note: string;
+  note?: string;
 }
 
-// Predefined expense categories
+// Main categories
 const EXPENSE_CATEGORIES = [
   'Food & Dining',
   'Transportation',
-  'Housing',
-  'Utilities',
+  'Petrol',
+  'Investment',
+  'Tea',
+  'Snacks',
+  'Housing Rent',
   'Entertainment',
   'Health',
   'Shopping',
   'Personal Care',
   'Education',
   'Travel',
-  'Gifts & Donations',
+  'Gifts',
   'Other',
 ];
 
-export const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, onSuccess, onCancel }) => {
+// Subcategories by category
+const SUB_CATEGORIES: Record<string, string[]> = {
+  'Food & Dining': ['Breakfast', 'Lunch', 'Dinner'],
+  Investment: ['Stocks', 'Mutual Fund SIP', 'Mutual Fund Bulk', 'Trading', 'Others'],
+  Transportation: ['Bus', 'Train', 'Cab', 'Bike'],
+  Health: ['Doctor', 'Medicine', 'Insurance'],
+  Shopping: ['Clothes', 'Electronics', 'Groceries'],
+  Travel: ['Flight', 'Train', 'Hotel', 'Local Travel'],
+};
+
+export const ExpenseForm: React.FC<ExpenseFormProps> = ({
+  expense,
+  onSuccess,
+  onCancel,
+}) => {
   const { addExpense, updateExpense } = useFinance();
   const isEditing = !!expense;
+
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    expense?.category || 'Food & Dining'
+  );
 
   const {
     register,
@@ -48,31 +70,33 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, onSuccess, on
   } = useForm<ExpenseFormValues>({
     defaultValues: expense
       ? {
-        amount: expense.amount,
-        category: expense.category,
-        date: expense.date ? expense.date.substring(0, 10) : '',
-        note: expense.note || '',
-      }
+          amount: expense.amount,
+          category: expense.category,
+          subcategory: expense.subcategory || '',
+          date: expense.date ? expense.date.substring(0, 10) : '',
+          note: expense.note || '',
+        }
       : {
-        date: new Date().toISOString().substring(0, 10),
-        category: 'Food & Dining',
-      },
+          amount: 0,
+          category: 'Food & Dining',
+          subcategory: '',
+          date: new Date().toISOString().substring(0, 10),
+        },
   });
 
   const onSubmit = async (data: ExpenseFormValues) => {
+    console.log("Form Data: ", data); // Log form data to verify it includes subcategory
     try {
       if (isEditing && expense) {
-        await updateExpense(expense.id, data);
+        await updateExpense(expense.id, data); // Make sure `data` includes subcategory
         toast.success('Expense updated successfully');
       } else {
-        await addExpense(data);
+        await addExpense(data); // Make sure `data` includes subcategory
         toast.success('Expense added successfully');
         reset();
       }
 
-      if (onSuccess) {
-        onSuccess();
-      }
+      if (onSuccess) onSuccess();
     } catch (error) {
       toast.error('An error occurred. Please try again.');
       console.error(error);
@@ -87,7 +111,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, onSuccess, on
         step="0.01"
         label="Amount (₹)"
         placeholder="0.00"
-        leftIcon={<span style={{ fontSize: '18px', marginRight: '8px' }}>₹</span>} // Use ₹ symbol here
+        leftIcon={<span style={{ fontSize: '18px', marginRight: '8px' }}>₹</span>}
         error={errors.amount?.message}
         {...register('amount', {
           required: 'Amount is required',
@@ -96,12 +120,15 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, onSuccess, on
         })}
       />
 
-
+      {/* Main Category */}
       <Select
         id="category"
         label="Category"
         error={errors.category?.message}
-        {...register('category', { required: 'Category is required' })}
+        {...register('category', {
+          required: 'Category is required',
+          onChange: (e) => setSelectedCategory(e.target.value),
+        })}
       >
         {EXPENSE_CATEGORIES.map((category) => (
           <option key={category} value={category}>
@@ -110,6 +137,24 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, onSuccess, on
         ))}
       </Select>
 
+      {/* Subcategory */}
+      {SUB_CATEGORIES[selectedCategory] && (
+        <Select
+          id="subcategory"
+          label="Subcategory"
+          error={errors.subcategory?.message}
+          {...register('subcategory')}
+        >
+          <option value="">Select subcategory</option>
+          {SUB_CATEGORIES[selectedCategory].map((sub) => (
+            <option key={sub} value={sub}>
+              {sub}
+            </option>
+          ))}
+        </Select>
+      )}
+
+      {/* Date */}
       <Input
         id="date"
         type="date"
@@ -119,6 +164,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, onSuccess, on
         {...register('date', { required: 'Date is required' })}
       />
 
+      {/* Note */}
       <TextArea
         id="note"
         label="Note (Optional)"
@@ -128,6 +174,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, onSuccess, on
         {...register('note')}
       />
 
+      {/* Buttons */}
       <div className="flex space-x-3 pt-2">
         <Button type="submit" isLoading={isSubmitting}>
           {isEditing ? 'Update' : 'Add'} Expense

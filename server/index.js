@@ -54,19 +54,22 @@ const initDb = async () => {
       )
     `);
     
-    // Create expense table if not exists
-    await connection.query(`
-      CREATE TABLE IF NOT EXISTS expense (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        amount DECIMAL(10,2) NOT NULL,
-        category VARCHAR(100) NOT NULL,
-        date DATE NOT NULL,
-        note TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      )
-    `);
+// Create expense table if not exists
+await connection.query(`
+  CREATE TABLE IF NOT EXISTS expense (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    subcategory VARCHAR(100),
+    date DATE NOT NULL,
+    note TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )
+`);
+
+
     
     console.log('Database initialized successfully');
     connection.release();
@@ -295,18 +298,28 @@ app.get('/api/expenses', authenticateToken, async (req, res) => {
 
 app.post('/api/expenses', authenticateToken, async (req, res) => {
   try {
-    const { amount, category, date, note } = req.body;
-    
+    const { amount, category, subcategory, date, note } = req.body;
+
+    // Get the database connection
     const connection = await pool.getConnection();
-    
+
+    // Query to insert the expense into the database
     const [result] = await connection.query(
-      'INSERT INTO expense (user_id, amount, category, date, note) VALUES (?, ?, ?, ?, ?)',
-      [req.user.id, amount, category, date, note]
+      'INSERT INTO expense (user_id, amount, category, subcategory, date, note) VALUES (?, ?, ?, ?, ?, ?)',
+      [req.user.id, amount, category, subcategory !== '' ? subcategory : null, date, note] // UPDATED line
     );
-    
-    connection.release();
-    
-    res.status(201).json({ id: result.insertId, amount, category, date, note });
+
+    connection.release(); // Release the connection
+
+    // Respond with the inserted data (including the ID from the result)
+    res.status(201).json({
+      id: result.insertId,
+      amount,
+      category,
+      subcategory,
+      date,
+      note
+    });
   } catch (error) {
     console.error('Error adding expense:', error);
     res.status(500).json({ message: 'Server error' });
@@ -315,35 +328,46 @@ app.post('/api/expenses', authenticateToken, async (req, res) => {
 
 app.put('/api/expenses/:id', authenticateToken, async (req, res) => {
   try {
-    const { amount, category, date, note } = req.body;
-    const expenseId = req.params.id;
-    
+    const { amount, category, subcategory, date, note } = req.body;
+    const expenseId = req.params.id; // Get the expense ID from the URL
+
     const connection = await pool.getConnection();
-    
-    // Check if expense belongs to user
+
+    // Check if the expense belongs to the authenticated user
     const [expenses] = await connection.query(
       'SELECT * FROM expense WHERE id = ? AND user_id = ?',
       [expenseId, req.user.id]
     );
-    
+
     if (expenses.length === 0) {
-      connection.release();
+      connection.release(); // Release the connection
       return res.status(404).json({ message: 'Expense not found' });
     }
-    
+
+    // Query to update the expense in the database
     await connection.query(
-      'UPDATE expense SET amount = ?, category = ?, date = ?, note = ? WHERE id = ?',
-      [amount, category, date, note, expenseId]
+      'UPDATE expense SET amount = ?, category = ?, subcategory = ?, date = ?, note = ? WHERE id = ?',
+      [amount, category, subcategory !== '' ? subcategory : null, date, note, expenseId] // UPDATED line
     );
-    
-    connection.release();
-    
-    res.json({ id: expenseId, amount, category, date, note });
+
+    connection.release(); // Release the connection
+
+    // Respond with the updated data
+    res.json({
+      id: expenseId,
+      amount,
+      category,
+      subcategory,
+      date,
+      note
+    });
   } catch (error) {
     console.error('Error updating expense:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+
 
 app.delete('/api/expenses/:id', authenticateToken, async (req, res) => {
   try {

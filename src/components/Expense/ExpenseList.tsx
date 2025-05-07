@@ -39,14 +39,11 @@ export const ExpenseList: React.FC = () => {
     }
   };
 
-  // Pagination logic: slice the expenses based on current page and items per page
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentExpenses = expenses.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Handle page change
   const handlePageChange = (pageNumber: number) => setCurrentPage(pageNumber);
-
   const totalPages = Math.ceil(expenses.length / itemsPerPage);
 
   if (!expenses || expenses.length === 0) {
@@ -64,60 +61,65 @@ export const ExpenseList: React.FC = () => {
 
   return (
     <>
-  <Card>
-  <CardHeader>
-    <CardTitle>Expense History</CardTitle>
-  </CardHeader>
-  <CardContent>
-    <div className="overflow-x-auto" style={{ maxHeight: '400px' }}> {/* Set max height here */}
-      <table className="min-w-[800px] w-full text-sm text-left">
-        <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-          <tr>
-            <th className="px-6 py-3">Date</th>
-            <th className="px-6 py-3">Category</th>
-            <th className="px-6 py-3">Amount</th>
-            <th className="px-6 py-3">Note</th>
-            <th className="px-6 py-3">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {currentExpenses.map((expense) => (
-            <tr key={expense.id} className="bg-white border-b hover:bg-gray-50">
-              <td className="px-6 py-4">{format(new Date(expense.date), 'MMM dd, yyyy')}</td>
-              <td className="px-6 py-4">
-                <span className="px-2 py-1 text-xs rounded-full bg-gray-100">
-                  {expense.category}
-                </span>
-              </td>
-              <td className="px-6 py-4 font-medium text-red-600">
-                <div className="flex items-center">
-                  <ArrowDownRight className="mr-1" size={16} />
-                  ₹{Number(expense.amount).toFixed(2)}
-                </div>
-              </td>
-              <td className="px-6 py-4">{expense.note || '-'}</td>
-              <td className="px-6 py-4 flex space-x-2">
-                <button
-                  className="text-primary-600 hover:text-primary-900"
-                  onClick={() => handleEdit(expense)}
-                >
-                  <Edit2 size={16} />
-                </button>
-                <button
-                  className="text-red-600 hover:text-red-900"
-                  onClick={() => handleDelete(expense)}
-                >
-                  <Trash2 size={16} />
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </CardContent>
-</Card>
-
+      <Card>
+        <CardHeader>
+          <CardTitle>Expense History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto" style={{ maxHeight: '400px' }}>
+            <table className="min-w-[900px] w-full text-sm text-left">
+              <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3">Date</th>
+                  <th className="px-6 py-3">Category</th>
+                  <th className="px-6 py-3">Subcategory</th>
+                  <th className="px-6 py-3">Amount</th>
+                  <th className="px-6 py-3">Note</th>
+                  <th className="px-6 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentExpenses.map((expense) => (
+                  <tr key={expense.id} className="bg-white border-b hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      {format(new Date(expense.date), 'MMM dd, yyyy')}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="px-2 py-1 text-xs rounded-full bg-gray-100">
+                        {expense.category}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-gray-600">
+                      {expense.subcategory || '-'}
+                    </td>
+                    <td className="px-6 py-4 font-medium text-red-600">
+                      <div className="flex items-center">
+                        <ArrowDownRight className="mr-1" size={16} />
+                        ₹{Number(expense.amount).toFixed(2)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">{expense.note || '-'}</td>
+                    <td className="px-6 py-4 flex space-x-2">
+                      <button
+                        className="text-primary-600 hover:text-primary-900"
+                        onClick={() => handleEdit(expense)}
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        className="text-red-600 hover:text-red-900"
+                        onClick={() => handleDelete(expense)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Pagination */}
       <div className="flex justify-center py-4">
@@ -166,11 +168,15 @@ export const ExpenseList: React.FC = () => {
         <div className="space-y-4">
           <p>Are you sure you want to delete this expense record?</p>
           <p>
-            <strong>Amount:</strong> ₹{selectedExpense ? Number(selectedExpense.amount ?? 0).toFixed(2) : '0.00'}
+            <strong>Amount:</strong> ₹
+            {selectedExpense ? Number(selectedExpense.amount).toFixed(2) : '0.00'}
             <br />
             <strong>Category:</strong> {selectedExpense?.category}
             <br />
-            <strong>Date:</strong> {selectedExpense ? format(new Date(selectedExpense.date), 'MMM dd, yyyy') : ''}
+            <strong>Subcategory:</strong> {selectedExpense?.subcategory || '-'}
+            <br />
+            <strong>Date:</strong>{' '}
+            {selectedExpense ? format(new Date(selectedExpense.date), 'MMM dd, yyyy') : ''}
           </p>
           <div className="flex space-x-3">
             <Button variant="danger" onClick={confirmDelete}>

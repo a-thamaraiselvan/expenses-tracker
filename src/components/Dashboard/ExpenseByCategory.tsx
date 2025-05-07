@@ -9,6 +9,7 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 export const ExpenseByCategory: React.FC = () => {
   const { summary } = useFinance();
 
+  // If data is missing or empty, show a message instead of the chart
   if (!summary || !summary.categoryTotals || summary.categoryTotals.length === 0) {
     return (
       <Card className="h-[400px]">
@@ -49,9 +50,9 @@ export const ExpenseByCategory: React.FC = () => {
     'rgba(54, 162, 99, 1)',
   ];
 
+  // Ensure categories and amounts are valid, and fallback to 0 if not valid
   const categories = summary.categoryTotals.map(item => item.category);
   const amounts = summary.categoryTotals.map(item => Number(item.amount) || 0);
-
 
   // Function to format currency in INR
   const formatCurrency = (amount: number) => {
@@ -63,6 +64,7 @@ export const ExpenseByCategory: React.FC = () => {
     }).format(amount);
   };
 
+  // Chart data
   const chartData = {
     labels: categories,
     datasets: [
@@ -75,6 +77,7 @@ export const ExpenseByCategory: React.FC = () => {
     ],
   };
 
+  // Chart options
   const options = {
     responsive: true,
     plugins: {
@@ -100,10 +103,9 @@ export const ExpenseByCategory: React.FC = () => {
             return `${label}: ${formatCurrency(value)} (${percentage}%)`;
           },
         },
-      }
-                  
+      },
     },
-    cutout: '70%',
+    cutout: '70%',  // Donut chart (inner radius)
   };
 
   return (
