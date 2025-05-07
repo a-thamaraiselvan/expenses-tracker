@@ -14,24 +14,31 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
+interface MonthlySummaryResponse {
+  income: number[];
+  expenses: number[];
+}
+
 export const MonthlyComparison: React.FC = () => {
   const [income, setIncome] = useState<number[]>(Array(12).fill(0));
   const [expenses, setExpenses] = useState<number[]>(Array(12).fill(0));
+  const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     try {
-      const response = await axios.get('/api/finance/monthly-summary');
-      setIncome(response.data.income); // Update income data
-      setExpenses(response.data.expenses); // Update expense data
+      const response = await axios.get<MonthlySummaryResponse>('/api/finance/monthly-summary');
+      setIncome(response.data.income ?? Array(12).fill(0));
+      setExpenses(response.data.expenses ?? Array(12).fill(0));
     } catch (error) {
       console.error('Error loading chart data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Re-fetch data every time the component mounts or whenever the month changes (if applicable)
   useEffect(() => {
     fetchData();
-  }, []);  // empty dependency array so that fetchData is called only once on mount
+  }, []);
 
   const data = {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
@@ -53,7 +60,7 @@ export const MonthlyComparison: React.FC = () => {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'top' as const },
+      legend: { position: 'top' },
       tooltip: {
         callbacks: {
           label: (context: any) => {
@@ -91,7 +98,7 @@ export const MonthlyComparison: React.FC = () => {
       </CardHeader>
       <CardContent>
         <div style={{ height: '400px' }}>
-          <Bar options={options} data={data} />
+          {loading ? <p>Loading chart...</p> : <Bar options={options} data={data} />}
         </div>
       </CardContent>
     </Card>

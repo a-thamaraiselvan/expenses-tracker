@@ -9,16 +9,15 @@ import { Income, Expense } from '../../types';
 type Transaction = (Income | Expense) & { type: 'income' | 'expense' };
 
 export const RecentTransactions: React.FC = () => {
-  const { summary, fetchSummary } = useFinance(); // Add a fetchSummary function to load data
+  const { summary, fetchSummary } = useFinance();
   const { user } = useAuth();
   const currencySymbol = user?.currency === 'INR' ? '₹' : user?.currency === 'USD' ? '$' : '';
-  
+
   useEffect(() => {
-    // Fetch the summary when the component mounts
-    fetchSummary(); // Make sure the backend returns all data
+    fetchSummary();
   }, [fetchSummary]);
 
-  if (!summary) {
+  if (!summary || !summary.recentIncomes || !summary.recentExpenses) {
     return (
       <Card className="animate-pulse">
         <CardHeader>
@@ -35,20 +34,19 @@ export const RecentTransactions: React.FC = () => {
     );
   }
 
-  // Combining income and expense data into one array
-  const incomeWithType: Transaction[] = summary.recentIncomes.map(income => ({
+  const incomeWithType: Transaction[] = (summary.recentIncomes ?? []).map(income => ({
     ...income,
     type: 'income'
   }));
 
-  const expensesWithType: Transaction[] = summary.recentExpenses.map(expense => ({
+  const expensesWithType: Transaction[] = (summary.recentExpenses ?? []).map(expense => ({
     ...expense,
     type: 'expense'
   }));
 
   const combinedTransactions = [...incomeWithType, ...expensesWithType]
-    .filter(txn => isSameMonth(new Date(txn.date), new Date()))  // Filter transactions for the current month
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());  // Sort by most recent
+    .filter(txn => isSameMonth(new Date(txn.date), new Date()))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const incomeCount = incomeWithType.filter(txn =>
     isSameMonth(new Date(txn.date), new Date())
@@ -65,12 +63,8 @@ export const RecentTransactions: React.FC = () => {
           <div className="flex justify-between items-center">
             <CardTitle>Recent Transactions</CardTitle>
             <div className="text-right space-y-1 text-sm text-gray-600">
-              <p className="text-green-600 font-semibold">
-                Income: {incomeCount}
-              </p>
-              <p className="text-red-600 font-semibold">
-                Expense: {expenseCount}
-              </p>
+              <p className="text-green-600 font-semibold">Income: {incomeCount}</p>
+              <p className="text-red-600 font-semibold">Expense: {expenseCount}</p>
             </div>
           </div>
         </CardHeader>
@@ -87,17 +81,12 @@ export const RecentTransactions: React.FC = () => {
         <div className="flex justify-between items-center">
           <CardTitle>Recent Transactions</CardTitle>
           <div className="text-right space-y-1 text-sm text-gray-600">
-            <p className="text-green-600 font-semibold">
-              Income: {incomeCount}
-            </p>
-            <p className="text-red-600 font-semibold">
-              Expense: {expenseCount}
-            </p>
+            <p className="text-green-600 font-semibold">Income: {incomeCount}</p>
+            <p className="text-red-600 font-semibold">Expense: {expenseCount}</p>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        {/* Transaction list */}
         <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
           {combinedTransactions.map((transaction) => (
             <div
@@ -115,30 +104,24 @@ export const RecentTransactions: React.FC = () => {
                 </div>
                 <div>
                   <p className="font-medium">
-                    {transaction.type === 'income' 
-                      ? (transaction.category || 'Income') // Display category if available
-                      : (transaction.category || 'Expense')  // Display category if available
-                    }
+                    {transaction.category || (transaction.type === 'income' ? 'Income' : 'Expense')}
                   </p>
-                  {/* Display description */}
                   <p className="text-xs text-gray-500">
-                    {transaction.note ? (
-                      transaction.note.length > 25 
-                        ? `${transaction.note.substring(0, 25)}...` 
+                    {transaction.note
+                      ? transaction.note.length > 25
+                        ? `${transaction.note.substring(0, 25)}...`
                         : transaction.note
-                    ) : 'No description'}
+                      : 'No description'}
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                {/* Amount and Currency */}
                 <p className={`font-semibold ${
                   transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                 }`}>
                   {transaction.type === 'income' ? '+' : '-'}
                   {currencySymbol}{Number(transaction.amount ?? 0).toFixed(2)}
                 </p>
-                {/* Date */}
                 <p className="text-xs text-gray-500">
                   {format(new Date(transaction.date), 'MMM dd, yyyy')}
                 </p>

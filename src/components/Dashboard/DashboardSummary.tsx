@@ -27,12 +27,12 @@ export const DashboardSummary: React.FC = () => {
     );
   }
 
-  // Get only current month entries
-  const currentIncomes = summary.recentIncomes.filter(income =>
+  // ✅ FIX: Use safe fallback if arrays are undefined
+  const currentIncomes = (summary.recentIncomes ?? []).filter(income =>
     isSameMonth(new Date(income.date), currentMonth)
   );
 
-  const currentExpenses = summary.recentExpenses.filter(expense =>
+  const currentExpenses = (summary.recentExpenses ?? []).filter(expense =>
     isSameMonth(new Date(expense.date), currentMonth)
   );
 

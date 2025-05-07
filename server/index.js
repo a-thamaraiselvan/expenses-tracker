@@ -454,56 +454,42 @@ app.get('/api/dashboard/summary', authenticateToken, async (req, res) => {
   }
 });
 
-
-
-
-
 // Monthly income and expense summary route
 app.get('/api/finance/monthly-summary', authenticateToken, async (req, res) => {
   try {
-    const { month, year } = req.query;
-    const currentDate = new Date();
+    const userId = req.user.id;
 
-    const selectedYear = year ? parseInt(year) : currentDate.getFullYear();
-    const selectedMonth = month ? parseInt(month) : null;
+    const [incomeRows] = await pool.query(`
+      SELECT MONTH(date) AS month, SUM(amount) AS total
+      FROM income
+      WHERE user_id = ?
+      GROUP BY MONTH(date)
+    `, [userId]);
 
-    const connection = await pool.getConnection();
+    const [expenseRows] = await pool.query(`
+      SELECT MONTH(date) AS month, SUM(amount) AS total
+      FROM expense
+      WHERE user_id = ?
+      GROUP BY MONTH(date)
+    `, [userId]);
 
-    // Income and expense queries
-    const incomeQuery = selectedMonth
-      ? 'SELECT MONTH(date) AS month, SUM(amount) AS total FROM income WHERE user_id = ? AND YEAR(date) = ? AND MONTH(date) = ? GROUP BY MONTH(date)'
-      : 'SELECT MONTH(date) AS month, SUM(amount) AS total FROM income WHERE user_id = ? AND YEAR(date) = ? GROUP BY MONTH(date)';
-    const incomeParams = selectedMonth ? [req.user.id, selectedYear, selectedMonth] : [req.user.id, selectedYear];
-    const [incomeRows] = await connection.query(incomeQuery, incomeParams);
-
-    const expenseQuery = selectedMonth
-      ? 'SELECT MONTH(date) AS month, SUM(amount) AS total FROM expense WHERE user_id = ? AND YEAR(date) = ? AND MONTH(date) = ? GROUP BY MONTH(date)'
-      : 'SELECT MONTH(date) AS month, SUM(amount) AS total FROM expense WHERE user_id = ? AND YEAR(date) = ? GROUP BY MONTH(date)';
-    const expenseParams = selectedMonth ? [req.user.id, selectedYear, selectedMonth] : [req.user.id, selectedYear];
-    const [expenseRows] = await connection.query(expenseQuery, expenseParams);
-
-    connection.release();
-
-    // Initialize full year arrays
     const income = Array(12).fill(0);
     const expenses = Array(12).fill(0);
 
     incomeRows.forEach(row => {
       income[row.month - 1] = row.total;
     });
+
     expenseRows.forEach(row => {
       expenses[row.month - 1] = row.total;
     });
 
     res.json({ income, expenses });
-
   } catch (error) {
     console.error('Error fetching monthly summary:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
-
-
 
 app.get('/api/report-data', authenticateToken, async (req, res) => {
   try {
@@ -569,7 +555,6 @@ app.get('/api/report-data', authenticateToken, async (req, res) => {
   }
 });
 
-
 // Get total income for a specific month and year
 app.get('/api/incomes/total/:year/:month', authenticateToken, async (req, res) => {
   try {
@@ -589,7 +574,6 @@ app.get('/api/incomes/total/:year/:month', authenticateToken, async (req, res) =
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 
 // Compare total income and expenses for a specific month
 app.get('/api/financial-comparison/:year/:month', authenticateToken, async (req, res) => {
@@ -625,6 +609,8 @@ app.get('/api/financial-comparison/:year/:month', authenticateToken, async (req,
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+
 
 
 // Initialize database and start server
