@@ -570,6 +570,63 @@ app.get('/api/report-data', authenticateToken, async (req, res) => {
 });
 
 
+// Get total income for a specific month and year
+app.get('/api/incomes/total/:year/:month', authenticateToken, async (req, res) => {
+  try {
+    const { year, month } = req.params;
+    const connection = await pool.getConnection();
+
+    const [totalIncome] = await connection.query(
+      'SELECT SUM(amount) AS totalIncome FROM income WHERE user_id = ? AND YEAR(date) = ? AND MONTH(date) = ?',
+      [req.user.id, year, month]
+    );
+
+    connection.release();
+
+    res.json({ totalIncome: totalIncome[0].totalIncome || 0 });
+  } catch (error) {
+    console.error('Error fetching total income:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+// Compare total income and expenses for a specific month
+app.get('/api/financial-comparison/:year/:month', authenticateToken, async (req, res) => {
+  try {
+    const { year, month } = req.params;
+
+    // Fetch total income
+    const [totalIncome] = await pool.query(
+      'SELECT SUM(amount) AS totalIncome FROM income WHERE user_id = ? AND YEAR(date) = ? AND MONTH(date) = ?',
+      [req.user.id, year, month]
+    );
+
+    // Fetch total expenses
+    const [totalExpense] = await pool.query(
+      'SELECT SUM(amount) AS totalExpense FROM expense WHERE user_id = ? AND YEAR(date) = ? AND MONTH(date) = ?',
+      [req.user.id, year, month]
+    );
+
+    const income = totalIncome[0].totalIncome || 0;
+    const expense = totalExpense[0].totalExpense || 0;
+
+    // Calculate the difference
+    const balance = income - expense;
+
+    res.json({
+      income,
+      expense,
+      balance,
+      message: balance >= 0 ? 'Surplus' : 'Deficit',
+    });
+  } catch (error) {
+    console.error('Error comparing income and expenses:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
 // Initialize database and start server
 // Health check endpoint (for Render)
 app.get('/healthz', (req, res) => {
