@@ -167,7 +167,8 @@ app.post('/api/auth/login', async (req, res) => {
     
     // Create and assign token
     const userData = { id: user.id, username: user.username, email: user.email };
-    const token = jwt.sign(userData, process.env.JWT_SECRET);
+    const token = jwt.sign(userData, process.env.JWT_SECRET, { expiresIn: '1h' });
+
     
     res.status(200).json({ user: userData, token });
   } catch (error) {
